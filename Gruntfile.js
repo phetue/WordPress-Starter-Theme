@@ -5,12 +5,14 @@ module.exports = function(grunt) {
     require('load-grunt-tasks')(grunt);
 
     grunt.initConfig({
+        cacheBuster: Math.floor( new Date() / 1000 ).toString(),
 
         // watch for changes and trigger sass, jshint, uglify and livereload
         watch: {
             sass: {
                 files: ['assets/styles/**/*.{scss,sass}'],
-                tasks: ['sass', 'autoprefixer', 'cssmin']
+                // tasks: ['sass', 'autoprefixer', 'cssmin', 'string-replace']
+                tasks: ['sass', 'autoprefixer', 'cssmin'] // string-replace removed for css injection during dev
             },
             js: {
                 files: '<%= jshint.all %>',
@@ -19,6 +21,10 @@ module.exports = function(grunt) {
             images: {
                 files: ['assets/images/**/*.{png,jpg,gif}'],
                 tasks: ['imagemin']
+            },
+            svg: {
+                files: ['assets/images/svg/*.svg'],
+                tasks: ['svgstore']
             }
         },
 
@@ -49,16 +55,32 @@ module.exports = function(grunt) {
             },
         },
 
+        // svg system
+        svgstore: {
+            options: {
+                prefix : 'shape-',
+                svg: {
+                    style: 'position: absolute; z-index: -1; width: 0; height: 0;'
+                }
+            },
+            default: {
+                files: {
+                    "assets/images/svg-defs.svg": ["assets/images/svg/*.svg"]
+                }
+            },
+        },
+
         // css minify
         cssmin: {
             options: {
-                keepSpecialComments: 1
+                keepSpecialComments: 1,
+                sourceMap: true
             },
-            minify: {
-                expand: true,
-                cwd: 'assets/styles/build',
-                src: ['*.css', '!*.min.css'],
-                ext: '.css'
+            target: {
+                files: {
+                    'style.css' : 'assets/styles/build/style.css',
+                    'editor-style.css' : 'assets/styles/build/editor-style.css'
+                }
             }
         },
 
@@ -82,7 +104,8 @@ module.exports = function(grunt) {
             },
             all: [
                 'Gruntfile.js',
-                'assets/js/source/**/*.js'
+                'assets/js/source/plugins.js',
+                'assets/js/source/main.js',
             ]
         },
 
@@ -97,7 +120,6 @@ module.exports = function(grunt) {
                 files: {
                     'assets/js/plugins.min.js': [
                         'assets/js/source/plugins.js',
-                        'assets/js/vendor/navigation.js',
                         'assets/js/vendor/skip-link-focus-fix.js',
                         // 'assets/js/vendor/yourplugin/yourplugin.js',
                     ]
@@ -105,14 +127,11 @@ module.exports = function(grunt) {
             },
             main: {
                 options: {
-                    sourceMap: 'assets/js/main.js.map',
-                    sourceMappingURL: 'main.js.map',
-                    sourceMapPrefix: 2
+                    sourceMap: true,
+                    sourceMapName: 'assets/js/main.js.map'
                 },
                 files: {
-                    'assets/js/main.min.js': [
-                        'assets/js/source/main.js'
-                    ]
+                    'assets/js/main.min.js': 'assets/js/source/main.js'
                 }
             }
         },
@@ -138,9 +157,10 @@ module.exports = function(grunt) {
         browserSync: {
             dev: {
                 bsFiles: {
-                    src : ['style.css', 'assets/js/*.js', 'assets/images/**/*.{png,jpg,jpeg,gif,webp,svg}']
+                    src : ['**/*.php', 'style.css', 'assets/js/*.js', 'assets/images/**/*.{png,jpg,jpeg,gif,webp,svg}']
                 },
                 options: {
+                    baseDir: "/",
                     proxy: "local.dev",
                     watchTask: true,
                     browser: "google chrome"
@@ -169,6 +189,22 @@ module.exports = function(grunt) {
                     host: "user@host.com"
                 }
             }
+        },
+
+        'string-replace': {
+            inline: {
+                files: {
+                    'lib/theme-functions.php': 'lib/theme-functions.php'
+                },
+                options: {
+                    replacements: [
+                        {
+                            pattern: /\$cache_buster \= \'[0-9]+\'\;/ig,
+                            replacement: '$cache_buster = \'<%= cacheBuster %>\';'
+                        }
+                    ]
+                }
+            }
         }
 
     });
@@ -180,6 +216,6 @@ module.exports = function(grunt) {
     grunt.renameTask('rsync', 'deploy');
 
     // register task
-    grunt.registerTask('default', ['sass', 'autoprefixer', 'cssmin', 'uglify', 'imagemin', 'browserSync', 'watch']);
+    grunt.registerTask('default', ['sass', 'autoprefixer', 'svgstore', 'cssmin', 'uglify', 'imagemin', 'string-replace', 'browserSync', 'watch']);
 
 };
