@@ -11,8 +11,8 @@ module.exports = function(grunt) {
         watch: {
             sass: {
                 files: ['assets/styles/**/*.{scss,sass}'],
-                // tasks: ['sass', 'autoprefixer', 'cssmin', 'string-replace']
-                tasks: ['sass', 'autoprefixer', 'cssmin'] // string-replace removed for css injection during dev
+                // tasks: ['sass', 'postcss', 'cssmin', 'string-replace']
+                tasks: ['sass', 'postcss', 'cssmin'] // string-replace removed for css injection during dev
             },
             js: {
                 files: '<%= jshint.all %>',
@@ -42,17 +42,19 @@ module.exports = function(grunt) {
         },
 
         // autoprefixer
-        autoprefixer: {
+        postcss: {
             options: {
-                browsers: ['last 2 versions', 'ie 9', 'ios 6', 'android 4'],
-                map: true
+                map: true,
+                processors: [
+                    require( 'autoprefixer' )( { browsers:[ 'last 2 versions', 'ie 9', 'ios 6', 'android 4' ] } )
+                ]
             },
             files: {
                 expand: true,
                 flatten: true,
                 src: 'assets/styles/build/*.css',
                 dest: 'assets/styles/build'
-            },
+            }
         },
 
         // svg system
@@ -81,18 +83,6 @@ module.exports = function(grunt) {
                     'style.css' : 'assets/styles/build/style.css',
                     'editor-style.css' : 'assets/styles/build/editor-style.css'
                 }
-            }
-        },
-
-        // image sprites
-        sprite: {
-            all: {
-                src: 'assets/images/sprites/*.png',
-                dest: 'assets/images/spritesheet.png',
-                destCss: 'assets/styles/partials/_spritesheet.scss',
-                padding: 30,
-                cssFormat: 'css',
-                imgPath: 'assets/images/spritesheet.png'
             }
         },
 
@@ -209,13 +199,11 @@ module.exports = function(grunt) {
 
     });
 
-    // Load in `grunt-spritesmith`
-    grunt.loadNpmTasks('grunt-spritesmith');
-
     // rename tasks
     grunt.renameTask('rsync', 'deploy');
 
-    // register task
-    grunt.registerTask('default', ['sass', 'autoprefixer', 'svgstore', 'cssmin', 'uglify', 'imagemin', 'string-replace', 'browserSync', 'watch']);
+    // register tasks
+    grunt.registerTask('compile', ['sass', 'postcss', 'svgstore', 'cssmin', 'uglify', 'imagemin', 'string-replace']);
+    grunt.registerTask('default', ['sass', 'postcss', 'svgstore', 'cssmin', 'uglify', 'imagemin', 'string-replace', 'browserSync', 'watch']);
 
 };
